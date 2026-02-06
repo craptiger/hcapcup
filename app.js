@@ -361,21 +361,26 @@ function renderAll() {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
-      const reg = await navigator.serviceWorker.register("./sw.js");
 
-      // If version changed, tell SW to update and take over
-      const last = localStorage.getItem("lastAppVersion");
-      if (last !== APP_VERSION) {
-        localStorage.setItem("lastAppVersion", APP_VERSION);
-        await reg.update();
+      // Version injected into SW URL → forces update when changed
+      const swUrl = `./sw.js?v=${APP_VERSION}`;
 
-        // If there is a waiting worker, activate it immediately
-        if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      const reg = await navigator.serviceWorker.register(swUrl);
+
+      // Display version
+      const appVersionEl = document.getElementById("appVersion");
+      if (appVersionEl) appVersionEl.textContent = APP_VERSION;
+
+      // Force activate new worker immediately
+      if (reg.waiting) {
+        reg.waiting.postMessage({ type: "SKIP_WAITING" });
       }
-    } catch {
-      // ignore
+
+    } catch (err) {
+      console.error("SW registration failed", err);
     }
   });
 }
+
 
 renderAll();
