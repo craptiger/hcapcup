@@ -132,8 +132,9 @@ th {
 }
 td .mini {
   width: 64px;
-  padding: 8px 8px;
+  padding: 6px 8px;
   text-align: center;
+  font-weight: 600;
 }
 .pairingTitle {
   text-align: left;
@@ -145,3 +146,17 @@ td .mini {
 th, td { padding: 6px; }
 td .mini { width: 56px; padding: 6px 6px; }
 .pairingTitle { font-weight: 800; }
+
+/* Remove spinner arrows from number inputs */
+
+/* Chrome, Edge, Safari */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
