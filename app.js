@@ -8,7 +8,8 @@
 */
 const APP_VERSION = "1.0.0";
 
-const STORAGE_KEY = "handicap-cup-v3";
+const STORAGE_KEY = `handicap-cup-${APP_VERSION}`;
+
 
 const clampIntOrBlank = (v, min, max) => {
   if (v === "" || v === null || v === undefined) return "";
