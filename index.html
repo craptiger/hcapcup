@@ -4,15 +4,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Handicap Cup Scorer</title>
+
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#111827">
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <header class="header">
     <div>
       <h1>Handicap Cup Scorer</h1>
-      <p class="subtle">3 vs 3 • 9 pairings • 4 games each • first to 11</p>
+      <p class="subtle">3 vs 3 • 9 sets • 4 games each • first to 11</p>
     </div>
     <div class="header-actions">
       <button id="btnReset" class="danger" type="button">Reset night</button>
@@ -45,22 +47,8 @@
 
       <div class="grid2">
         <div>
-          <h3>Adjustments (optional)</h3>
-          <p class="subtle">If you need to add/subtract points (e.g. admin correction), use these.</p>
-          <div class="grid2">
-            <label class="field">
-              <span>Home adjustment</span>
-              <input id="homeAdj" type="number" step="1" />
-            </label>
-            <label class="field">
-              <span>Away adjustment</span>
-              <input id="awayAdj" type="number" step="1" />
-            </label>
-          </div>
-        </div>
-
-        <div>
-          <h3>Live totals</h3>
+          <h3>Points scored</h3>
+          <p class="subtle">These are the totals from all entered games (not including handicaps).</p>
           <div class="totals">
             <div class="totalBox">
               <div class="k">Home points scored</div>
@@ -70,8 +58,14 @@
               <div class="k">Away points scored</div>
               <div id="awayPts" class="v">0</div>
             </div>
+          </div>
+        </div>
+
+        <div>
+          <h3>Overall</h3>
+          <div class="totals">
             <div class="totalBox big">
-              <div class="k">GRAND TOTAL</div>
+              <div class="k">GRAND TOTAL (Handicap + Points)</div>
               <div class="v">
                 <span id="grandHome">0</span>
                 <span class="vs">vs</span>
@@ -89,11 +83,15 @@
       </div>
     </section>
 
-<section class="card">
-  <h2>Matches</h2>
-  <p class="subtle">Enter points per game (0–11). Exchange can be used for corrections. Totals update instantly.</p>
-  <div id="matches"></div>
-</section>
+    <section class="card">
+      <h2>Matches</h2>
+      <p class="subtle">Enter points per game (0–11). “Set total” and running totals update instantly.</p>
+      <div id="matches"></div>
+    </section>
+
+    <footer class="footer">
+      <span>Version: <strong id="appVersion">—</strong></span>
+    </footer>
   </main>
 
   <script src="app.js"></script>
