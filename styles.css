@@ -141,3 +141,7 @@ td .mini {
   color: #0f172a;
   white-space: nowrap;
 }
+/* Slightly more spreadsheet-like density */
+th, td { padding: 6px; }
+td .mini { width: 56px; padding: 6px 6px; }
+.pairingTitle { font-weight: 800; }
