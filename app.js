@@ -165,4 +165,198 @@ function renderRoster(teamKey, mountEl) {
     const nameInput = document.createElement("input");
     nameInput.type = "text";
     nameInput.value = p.name ?? "";
-    nameInput.addEve
+    nameInput.addEventListener("input", (e) => {
+      state[teamKey][idx].name = e.target.value;
+      saveState();
+      // Names not displayed in grid yet, but keep for future
+    });
+    nameField.appendChild(nameInput);
+
+    const hcapField = document.createElement("label");
+    hcapField.className = "field";
+    hcapField.innerHTML = `<span>HCap</span>`;
+    const hcapInput = document.createElement("input");
+    hcapInput.type = "number";
+    hcapInput.step = "1";
+    hcapInput.value = Number(p.hcap || 0);
+    hcapInput.addEventListener("input", (e) => {
+      state[teamKey][idx].hcap = clampInt(e.target.value, 0, 999);
+      saveState();
+      renderTotalsOnly();
+      renderMatchesOnly(); // running totals base changes
+    });
+    hcapField.appendChild(hcapInput);
+
+    row.appendChild(nameField);
+    row.appendChild(hcapField);
+    mountEl.appendChild(row);
+  });
+}
+
+// --- Render spreadsheet-style matches table (with Set Totals)
+function renderMatchesOnly() {
+  const { rows: running } = computeRunningTotalsByRow();
+
+  const table = document.createElement("table");
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th>Matches</th>
+      <th colspan="2">Game 1</th>
+      <th colspan="2">Game 2</th>
+      <th colspan="2">Game 3</th>
+      <th colspan="2">Game 4</th>
+      <th colspan="2">Set total</th>
+      <th>TOTAL HOME</th>
+      <th>TOTAL AWAY</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th>H</th><th>A</th>
+      <th>H</th><th>A</th>
+      <th>H</th><th>A</th>
+      <th>H</th><th>A</th>
+      <th>HOME</th><th>AWAY</th>
+      <th></th>
+      <th></th>
+    </tr>
+  `;
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+
+  for (let r = 0; r < 9; r++) {
+    const tr = document.createElement("tr");
+
+    const matchSpec = MATCH_ORDER[r];
+    const hi = matchSpec.h - 1;
+    const ai = matchSpec.a - 1;
+
+    const matchTd = document.createElement("td");
+    matchTd.className = "pairingTitle";
+    matchTd.textContent = `${matchSpec.h} v ${matchSpec.a}`;
+    tr.appendChild(matchTd);
+
+    // 4 games: H/A inputs
+    for (let g = 0; g < 4; g++) {
+      const cell = state.scores[r][g];
+
+      const tdH = document.createElement("td");
+      const inH = document.createElement("input");
+      inH.className = "mini";
+      inH.type = "number";
+      inH.min = "0";
+      inH.max = "11";
+      inH.step = "1";
+      inH.value = cell.h;
+      inH.title = `${state.home[hi]?.name || "Home"} vs ${state.away[ai]?.name || "Away"} — Game ${g + 1} (Home points)`;
+      inH.addEventListener("input", (e) => {
+        state.scores[r][g].h = clampIntOrBlank(e.target.value, 0, 11);
+        saveState();
+        renderTotalsOnly();
+        renderMatchesOnly(); // update set + running totals
+      });
+      tdH.appendChild(inH);
+
+      const tdA = document.createElement("td");
+      const inA = document.createElement("input");
+      inA.className = "mini";
+      inA.type = "number";
+      inA.min = "0";
+      inA.max = "11";
+      inA.step = "1";
+      inA.value = cell.a;
+      inA.title = `${state.home[hi]?.name || "Home"} vs ${state.away[ai]?.name || "Away"} — Game ${g + 1} (Away points)`;
+      inA.addEventListener("input", (e) => {
+        state.scores[r][g].a = clampIntOrBlank(e.target.value, 0, 11);
+        saveState();
+        renderTotalsOnly();
+        renderMatchesOnly();
+      });
+      tdA.appendChild(inA);
+
+      tr.appendChild(tdH);
+      tr.appendChild(tdA);
+    }
+
+    // Set totals (computed, read-only)
+    const st = rowSetTotals(r);
+
+    const setH = document.createElement("td");
+    setH.textContent = st.home;
+    const setA = document.createElement("td");
+    setA.textContent = st.away;
+
+    tr.appendChild(setH);
+    tr.appendChild(setA);
+
+    // Running totals
+    const totH = document.createElement("td");
+    totH.textContent = running[r]?.totalHome ?? 0;
+    const totA = document.createElement("td");
+    totA.textContent = running[r]?.totalAway ?? 0;
+
+    tr.appendChild(totH);
+    tr.appendChild(totA);
+
+    tbody.appendChild(tr);
+  }
+
+  // bottom totals row
+  const last = running[running.length - 1] || { totalHome: sumHandicaps(state.home), totalAway: sumHandicaps(state.away) };
+  const trBottom = document.createElement("tr");
+  trBottom.innerHTML = `
+    <td class="pairingTitle">TOTAL</td>
+    <td colspan="10"></td>
+    <td><strong>${last.totalHome}</strong></td>
+    <td><strong>${last.totalAway}</strong></td>
+  `;
+  tbody.appendChild(trBottom);
+
+  table.appendChild(tbody);
+
+  matchesEl.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "matchGrid";
+  wrap.appendChild(table);
+  matchesEl.appendChild(wrap);
+}
+
+function renderTotalsOnly() {
+  const homeHcap = sumHandicaps(state.home);
+  const awayHcap = sumHandicaps(state.away);
+
+  const pts = sumPointsAll();
+
+  const grandHome = homeHcap + pts.home;
+  const grandAway = awayHcap + pts.away;
+
+  homeHcapTotalEl.textContent = homeHcap;
+  awayHcapTotalEl.textContent = awayHcap;
+
+  homePtsEl.textContent = pts.home;
+  awayPtsEl.textContent = pts.away;
+
+  grandHomeEl.textContent = grandHome;
+  grandAwayEl.textContent = grandAway;
+
+  scoreHomeEl.textContent = grandHome;
+  scoreAwayEl.textContent = grandAway;
+}
+
+function renderAll() {
+  renderRoster("home", homeRosterEl);
+  renderRoster("away", awayRosterEl);
+  renderMatchesOnly();
+  renderTotalsOnly();
+}
+
+// Service worker
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+
+renderAll();
