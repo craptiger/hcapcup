@@ -1,4 +1,4 @@
-// Extract version from query string
+// Extract version from query string,
 const params = new URL(self.location).searchParams;
 const VERSION = params.get("v") || "dev";
 
