@@ -356,8 +356,22 @@ function renderAll() {
 
 // Service worker
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  window.addEventListener("load", async () => {
+    try {
+      const reg = await navigator.serviceWorker.register("./sw.js");
+
+      // If version changed, tell SW to update and take over
+      const last = localStorage.getItem("lastAppVersion");
+      if (last !== APP_VERSION) {
+        localStorage.setItem("lastAppVersion", APP_VERSION);
+        await reg.update();
+
+        // If there is a waiting worker, activate it immediately
+        if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      }
+    } catch {
+      // ignore
+    }
   });
 }
 
