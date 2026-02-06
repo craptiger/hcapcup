@@ -100,6 +100,9 @@ const grandAwayEl = document.getElementById("grandAway");
 const scoreHomeEl = document.getElementById("scoreHome");
 const scoreAwayEl = document.getElementById("scoreAway");
 
+const appVersionEl = document.getElementById("appVersion");
+if (appVersionEl) appVersionEl.textContent = APP_VERSION;
+
 document.getElementById("btnReset").addEventListener("click", () => {
   if (!confirm("Reset everything for a new night?")) return;
   state = defaultState();
