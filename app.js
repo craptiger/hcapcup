@@ -6,10 +6,9 @@
    - Running totals displayed per row (handicap base + cumulative points)
    - Persists to localStorage
 */
+
 const APP_VERSION = "1.0.5";
-
 const STORAGE_KEY = `handicap-cup-${APP_VERSION}`;
-
 
 const clampIntOrBlank = (v, min, max) => {
   if (v === "" || v === null || v === undefined) return "";
@@ -58,30 +57,13 @@ const defaultState = () => ({
   ),
 });
 
-function focusNextScoreInput(current) {
-  const inputs = Array.from(document.querySelectorAll(".mini"));
-
-  const index = inputs.indexOf(current);
-  if (index === -1) return;
-
-  const next = inputs[index + 1];
-
-  if (next) {
-    next.focus();
-    next.select();
-  }
-}
-
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState();
     const s = JSON.parse(raw);
 
-    // If upgrading from previous versions (v2 had exchange), ignore it.
     if (!s.scores) return defaultState();
-
-    // Basic shape safety
     if (!Array.isArray(s.home) || !Array.isArray(s.away)) return defaultState();
     if (!Array.isArray(s.scores) || s.scores.length !== 9) return defaultState();
 
@@ -117,13 +99,14 @@ const scoreAwayEl = document.getElementById("scoreAway");
 const appVersionEl = document.getElementById("appVersion");
 if (appVersionEl) appVersionEl.textContent = APP_VERSION;
 
-document.getElementById("btnReset").addEventListener("click", () => {
+document.getElementById("btnReset")?.addEventListener("click", () => {
   if (!confirm("Reset everything for a new night?")) return;
   state = defaultState();
   saveState();
   renderAll();
 });
 
+// ---------- calculations ----------
 function sumHandicaps(team) {
   return team.reduce((acc, p) => acc + (Number(p.hcap) || 0), 0);
 }
@@ -144,7 +127,7 @@ function rowSetTotals(rowIndex) {
 function sumPointsAll() {
   let home = 0;
   let away = 0;
-  for (let r = 0; r < state.scores.length; r++) {
+  for (let r = 0; r < 9; r++) {
     const rt = rowSetTotals(r);
     home += rt.home;
     away += rt.away;
@@ -171,7 +154,55 @@ function computeRunningTotalsByRow() {
   return { baseHome, baseAway, rows };
 }
 
-// --- Render roster
+// ---------- navigation helpers ----------
+function focusNextScoreInput(current) {
+  // Only match inputs have class .mini
+  const inputs = Array.from(document.querySelectorAll(".mini"));
+  const i = inputs.indexOf(current);
+  if (i === -1) return;
+
+  const next = inputs[i + 1];
+  if (next) {
+    next.focus();
+    // select after focus for mobile reliability
+    setTimeout(() => next.select(), 0);
+  }
+}
+
+// ---------- in-place UI updates (no table rebuild) ----------
+function updateRowComputedCells(rowIndex) {
+  const st = rowSetTotals(rowIndex);
+
+  const setH = document.getElementById(`setH-${rowIndex}`);
+  const setA = document.getElementById(`setA-${rowIndex}`);
+
+  if (setH) setH.textContent = st.home;
+  if (setA) setA.textContent = st.away;
+}
+
+function updateAllRunningTotalsCells() {
+  const { rows: running } = computeRunningTotalsByRow();
+
+  for (let r = 0; r < 9; r++) {
+    updateRowComputedCells(r);
+
+    const runH = document.getElementById(`runH-${r}`);
+    const runA = document.getElementById(`runA-${r}`);
+
+    if (runH) runH.textContent = running[r]?.totalHome ?? 0;
+    if (runA) runA.textContent = running[r]?.totalAway ?? 0;
+  }
+
+  const last = running[running.length - 1];
+  const totalHomeEl = document.getElementById("finalTotalHome");
+  const totalAwayEl = document.getElementById("finalTotalAway");
+  if (last && totalHomeEl && totalAwayEl) {
+    totalHomeEl.textContent = last.totalHome;
+    totalAwayEl.textContent = last.totalAway;
+  }
+}
+
+// ---------- render ----------
 function renderRoster(teamKey, mountEl) {
   mountEl.innerHTML = "";
   state[teamKey].forEach((p, idx) => {
@@ -187,7 +218,6 @@ function renderRoster(teamKey, mountEl) {
     nameInput.addEventListener("input", (e) => {
       state[teamKey][idx].name = e.target.value;
       saveState();
-      // Names not displayed in grid yet, but keep for future
     });
     nameField.appendChild(nameInput);
 
@@ -202,7 +232,9 @@ function renderRoster(teamKey, mountEl) {
       state[teamKey][idx].hcap = clampInt(e.target.value, 0, 999);
       saveState();
       renderTotalsOnly();
-      renderMatchesOnly(); // running totals base changes
+
+      // IMPORTANT: do not rebuild table; update totals cells in-place
+      updateAllRunningTotalsCells();
     });
     hcapField.appendChild(hcapInput);
 
@@ -212,7 +244,29 @@ function renderRoster(teamKey, mountEl) {
   });
 }
 
-// --- Render spreadsheet-style matches table (with Set Totals)
+function wireScoreInputCommon(inputEl, rowIndex, onEnter) {
+  inputEl.setAttribute("enterkeyhint", "next");
+
+  // Select value on focus (overwrite-friendly)
+  inputEl.addEventListener("focus", (e) => {
+    setTimeout(() => e.target.select(), 0);
+  });
+
+  // ENTER -> next
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onEnter(e.target);
+    }
+  });
+
+  // When leaving a cell, update set totals + running totals (in-place)
+  inputEl.addEventListener("blur", () => {
+    updateRowComputedCells(rowIndex);
+    updateAllRunningTotalsCells();
+  });
+}
+
 function renderMatchesOnly() {
   const { rows: running } = computeRunningTotalsByRow();
 
@@ -270,26 +324,15 @@ function renderMatchesOnly() {
       inH.step = "1";
       inH.value = cell.h;
       inH.title = `${state.home[hi]?.name || "Home"} vs ${state.away[ai]?.name || "Away"} — Game ${g + 1} (Home points)`;
+
+      // IMPORTANT: on input, do not rebuild table (keeps focus)
       inH.addEventListener("input", (e) => {
         state.scores[r][g].h = clampIntOrBlank(e.target.value, 0, 11);
         saveState();
-        renderTotalsOnly(); // update header totals only
+        renderTotalsOnly(); // header totals live
       });
-       inH.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          focusNextScoreInput(e.target);
-        }
-      });
-       inH.addEventListener("blur", () => {
-  renderMatchesOnly();
-});
-// Auto-select the whole number when the field gains focus
-inH.addEventListener("focus", (e) => {
-  // Using a tiny timeout avoids some mobile/browser quirks
-  setTimeout(() => e.target.select(), 0);
-});
 
+      wireScoreInputCommon(inH, r, focusNextScoreInput);
 
       tdH.appendChild(inH);
 
@@ -302,25 +345,14 @@ inH.addEventListener("focus", (e) => {
       inA.step = "1";
       inA.value = cell.a;
       inA.title = `${state.home[hi]?.name || "Home"} vs ${state.away[ai]?.name || "Away"} — Game ${g + 1} (Away points)`;
+
       inA.addEventListener("input", (e) => {
         state.scores[r][g].a = clampIntOrBlank(e.target.value, 0, 11);
         saveState();
         renderTotalsOnly();
       });
-       inA.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          focusNextScoreInput(e.target);
-        }
-      });
-       inA.addEventListener("blur", () => {
-  renderMatchesOnly();
-});
-       // Auto-select the whole number when the field gains focus
-inA.addEventListener("focus", (e) => {
-  // Using a tiny timeout avoids some mobile/browser quirks
-  setTimeout(() => e.target.select(), 0);
-});
+
+      wireScoreInputCommon(inA, r, focusNextScoreInput);
 
       tdA.appendChild(inA);
 
@@ -332,8 +364,11 @@ inA.addEventListener("focus", (e) => {
     const st = rowSetTotals(r);
 
     const setH = document.createElement("td");
+    setH.id = `setH-${r}`;
     setH.textContent = st.home;
+
     const setA = document.createElement("td");
+    setA.id = `setA-${r}`;
     setA.textContent = st.away;
 
     tr.appendChild(setH);
@@ -341,8 +376,11 @@ inA.addEventListener("focus", (e) => {
 
     // Running totals
     const totH = document.createElement("td");
+    totH.id = `runH-${r}`;
     totH.textContent = running[r]?.totalHome ?? 0;
+
     const totA = document.createElement("td");
+    totA.id = `runA-${r}`;
     totA.textContent = running[r]?.totalAway ?? 0;
 
     tr.appendChild(totH);
@@ -357,8 +395,8 @@ inA.addEventListener("focus", (e) => {
   trBottom.innerHTML = `
     <td class="pairingTitle">TOTAL</td>
     <td colspan="10"></td>
-    <td><strong>${last.totalHome}</strong></td>
-    <td><strong>${last.totalAway}</strong></td>
+    <td><strong id="finalTotalHome">${last.totalHome}</strong></td>
+    <td><strong id="finalTotalAway">${last.totalAway}</strong></td>
   `;
   tbody.appendChild(trBottom);
 
@@ -396,34 +434,25 @@ function renderTotalsOnly() {
 function renderAll() {
   renderRoster("home", homeRosterEl);
   renderRoster("away", awayRosterEl);
-  renderMatchesOnly();
+  renderMatchesOnly();   // full build once
   renderTotalsOnly();
 }
 
-// Service worker
+// Service worker (versioned URL so SW updates automatically)
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
-
-      // Version injected into SW URL → forces update when changed
       const swUrl = `./sw.js?v=${APP_VERSION}`;
-
       const reg = await navigator.serviceWorker.register(swUrl);
 
-      // Display version
-      const appVersionEl = document.getElementById("appVersion");
-      if (appVersionEl) appVersionEl.textContent = APP_VERSION;
-
-      // Force activate new worker immediately
+      // take over immediately if a new worker is waiting
       if (reg.waiting) {
         reg.waiting.postMessage({ type: "SKIP_WAITING" });
       }
-
     } catch (err) {
       console.error("SW registration failed", err);
     }
   });
 }
-
 
 renderAll();
