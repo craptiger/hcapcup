@@ -6,7 +6,7 @@
    - Running totals displayed per row (handicap base + cumulative points)
    - Persists to localStorage
 */
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 
 const STORAGE_KEY = `handicap-cup-${APP_VERSION}`;
 
