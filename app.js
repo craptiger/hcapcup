@@ -7,7 +7,7 @@
    - Persists to localStorage
 */
 
-const APP_VERSION = "1.0.5";
+const APP_VERSION = "1.0.6";
 const STORAGE_KEY = `handicap-cup-${APP_VERSION}`;
 
 const clampIntOrBlank = (v, min, max) => {
