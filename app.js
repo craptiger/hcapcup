@@ -6,7 +6,7 @@
    - Running totals displayed per row (handicap base + cumulative points)
    - Persists to localStorage
 */
-const APP_VERSION = "1.0.2";
+const APP_VERSION = "1.0.3";
 
 const STORAGE_KEY = `handicap-cup-${APP_VERSION}`;
 
@@ -57,6 +57,20 @@ const defaultState = () => ({
     Array.from({ length: 4 }, () => ({ h: "", a: "" }))
   ),
 });
+
+function focusNextScoreInput(current) {
+  const inputs = Array.from(document.querySelectorAll(".mini"));
+
+  const index = inputs.indexOf(current);
+  if (index === -1) return;
+
+  const next = inputs[index + 1];
+
+  if (next) {
+    next.focus();
+    next.select();
+  }
+}
 
 function loadState() {
   try {
@@ -261,6 +275,12 @@ function renderMatchesOnly() {
         saveState();
         renderTotalsOnly(); // update header totals only
       });
+       inH.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          focusNextScoreInput(e.target);
+        }
+      });
        inH.addEventListener("blur", () => {
   renderMatchesOnly();
 });
@@ -286,6 +306,12 @@ inH.addEventListener("focus", (e) => {
         state.scores[r][g].a = clampIntOrBlank(e.target.value, 0, 11);
         saveState();
         renderTotalsOnly();
+      });
+       inA.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          focusNextScoreInput(e.target);
+        }
       });
        inA.addEventListener("blur", () => {
   renderMatchesOnly();
