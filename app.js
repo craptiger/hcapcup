@@ -259,9 +259,18 @@ function renderMatchesOnly() {
       inH.addEventListener("input", (e) => {
         state.scores[r][g].h = clampIntOrBlank(e.target.value, 0, 11);
         saveState();
-        renderTotalsOnly();
-        renderMatchesOnly(); // update set + running totals
+        renderTotalsOnly(); // update header totals only
       });
+       inH.addEventListener("blur", () => {
+  renderMatchesOnly();
+});
+// Auto-select the whole number when the field gains focus
+inH.addEventListener("focus", (e) => {
+  // Using a tiny timeout avoids some mobile/browser quirks
+  setTimeout(() => e.target.select(), 0);
+});
+
+
       tdH.appendChild(inH);
 
       const tdA = document.createElement("td");
@@ -277,8 +286,16 @@ function renderMatchesOnly() {
         state.scores[r][g].a = clampIntOrBlank(e.target.value, 0, 11);
         saveState();
         renderTotalsOnly();
-        renderMatchesOnly();
       });
+       inA.addEventListener("blur", () => {
+  renderMatchesOnly();
+});
+       // Auto-select the whole number when the field gains focus
+inA.addEventListener("focus", (e) => {
+  // Using a tiny timeout avoids some mobile/browser quirks
+  setTimeout(() => e.target.select(), 0);
+});
+
       tdA.appendChild(inA);
 
       tr.appendChild(tdH);
