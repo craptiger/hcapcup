@@ -160,3 +160,9 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+.footer {
+  margin: 10px 2px 24px;
+  padding: 10px 12px;
+  color: #475569;
+  font-size: 13px;
+}
