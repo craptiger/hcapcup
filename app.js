@@ -1,4 +1,4 @@
-/* Handicap Cup Scorer — Spreadsheet-mirroring version (Set Totals)
+/* Handicap Cup Scorer — Spreadsheet-mirroring version (Set Totals).
    - 3v3 roster editable + handicap totals
    - Fixed match row order to match your Excel
    - Each row: 4 games (Home/Away points)
